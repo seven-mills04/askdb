@@ -1,0 +1,211 @@
+/* AskDB landing page.
+   Colour blocks instead of cards: cobalt, paper, ink, yellow. One typeface for everything
+   people read (Bricolage Grotesque, set narrow and heavy for headlines) and a monospace
+   only where there is actual SQL. Motion is handled by GSAP in HeroAsk.jsx and Risks.jsx. */
+
+.lp {
+  --cobalt: #2437e6;
+  --ink: #0b1030;
+  --paper: #eceef4;
+  --yellow: #ffd640;
+  --red: #e5402f;
+  --green: #0f7a4d;
+  --sans: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, Consolas, monospace;
+  --pad: clamp(18px, 4.5vw, 64px);
+
+  font-family: var(--sans);
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--paper);
+  background: var(--cobalt);
+  overflow-x: clip;
+}
+.lp *, .lp *::before, .lp *::after { box-sizing: border-box; }
+.lp a { color: inherit; }
+/* :where() gives this reset no weight, so every rule further down wins without a fight. */
+.lp :where(p, h1, h2, h3, ul, ol, figure, pre) { margin: 0; padding: 0; }
+.lp :where(ul, ol) { list-style: none; }
+.lp :focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 84px; }
+
+/* Headline voice: narrow, heavy, tight. */
+.lp h1, .lp h2, .lp .lp-answer {
+  font-stretch: 75%;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 0.94;
+  text-wrap: balance;
+}
+.lp h2 { font-size: clamp(38px, 6.2vw, 92px); max-width: 16ch; }
+.lp-lede { max-width: 54ch; margin-top: 28px; font-size: clamp(17px, 1.5vw, 21px); }
+.lp-wrap { max-width: 1280px; margin: 0 auto; padding: clamp(72px, 11vw, 150px) var(--pad); }
+
+/* ---------- nav: a floating pill, so it sits on any colour ---------- */
+.lp-nav {
+  position: sticky; top: 14px; z-index: 20;
+  display: flex; align-items: center; gap: 6px;
+  width: fit-content; max-width: calc(100% - 24px); margin: 0 auto; padding: 6px 6px 6px 18px;
+  color: var(--paper); background: var(--ink); border-radius: 999px;
+  font-size: 15px; font-weight: 500;
+}
+.lp-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 17px; text-decoration: none; }
+.lp-nav nav { display: flex; gap: 4px; margin: 0 10px 0 18px; }
+.lp-nav nav a, .lp-link {
+  padding: 8px 12px; border: 0; border-radius: 999px; background: none; color: inherit;
+  font: inherit; text-decoration: none; cursor: pointer; opacity: 0.75;
+}
+.lp-nav nav a:hover, .lp-link:hover { opacity: 1; background: rgba(236, 238, 244, 0.1); }
+
+.lp-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 9px 18px; border: 2px solid transparent; border-radius: 999px;
+  font: inherit; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.lp-btn:hover { transform: translateY(-2px); }
+.lp-btn:active { transform: translateY(0); }
+.lp-btn-big { padding: 16px 28px; font-size: 18px; }
+.lp-btn-yellow { background: var(--yellow); color: var(--ink); }
+.lp-btn-yellow:hover { background: #ffe57a; }
+.lp-btn-line { background: transparent; color: var(--paper); border-color: var(--paper); }
+.lp-btn-line:hover { background: var(--paper); color: var(--cobalt); }
+
+/* ---------- hero: the question is the headline ---------- */
+.lp-hero { max-width: 1440px; margin: 0 auto; padding: clamp(40px, 6vw, 88px) var(--pad) clamp(56px, 7vw, 96px); }
+.lp-ask-label { font-size: 17px; font-weight: 600; opacity: 0.7; margin-bottom: 10px; }
+.lp-question {
+  font-size: clamp(44px, 8.2vw, 132px);
+  min-height: 1.88em; /* room for two lines, so the page never jumps */
+  max-width: 17ch;
+  padding-bottom: 0.12em;
+}
+.lp-word { display: inline-block; white-space: nowrap; margin-right: 0.22em; }
+.lp-q-char, .lp-a-char { display: inline-block; }
+
+.lp-answer-row {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: clamp(24px, 4vw, 64px); align-items: end;
+  margin-top: clamp(20px, 3vw, 40px); padding-top: clamp(20px, 3vw, 36px);
+  border-top: 3px solid var(--paper);
+}
+.lp-answer { position: relative; display: inline-block; font-size: clamp(40px, 7.4vw, 118px); color: var(--ink); padding: 0.06em 0.16em 0.1em; }
+.lp-marker { position: absolute; inset: 0; background: var(--yellow); transform-origin: left center; border-radius: 6px; }
+.lp-answer-text { position: relative; display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.04em; }
+.lp-answer .lp-word:last-child { margin-right: 0; }
+.lp-detail { margin-top: 22px; font-size: clamp(18px, 1.9vw, 26px); font-weight: 500; max-width: 36ch; text-wrap: pretty; }
+
+/* The SQL, on a slip of paper. */
+.lp-slip {
+  background: var(--paper); color: var(--ink); border-radius: 4px; padding: 18px 20px 20px;
+  transform: rotate(1.6deg); box-shadow: 10px 12px 0 rgba(11, 16, 48, 0.35);
+}
+.lp-slip figcaption { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+.lp-slip pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; white-space: pre; overflow-x: auto; }
+
+.lp-picks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: clamp(32px, 4vw, 56px); }
+.lp-picks button {
+  padding: 8px 16px; border: 2px solid rgba(236, 238, 244, 0.45); border-radius: 999px; background: none;
+  color: var(--paper); font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.lp-picks button:hover { border-color: var(--paper); }
+.lp-picks button[aria-selected='true'] { background: var(--paper); border-color: var(--paper); color: var(--cobalt); font-weight: 700; }
+
+.lp-hero-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px;
+  margin-top: clamp(36px, 5vw, 64px);
+}
+.lp-hero-foot p { max-width: 52ch; font-size: clamp(17px, 1.5vw, 20px); }
+
+/* ---------- paper: how it works ---------- */
+.lp-paper { background: var(--paper); color: var(--ink); }
+.lp-anatomy { margin-top: clamp(40px, 6vw, 80px); }
+.lp-anatomy-q { font-size: clamp(28px, 4.4vw, 60px); font-weight: 700; font-stretch: 85%; letter-spacing: -0.025em; line-height: 1.25; }
+.lp-anatomy-arrow { margin: 18px 0; font-size: 16px; font-weight: 600; opacity: 0.55; }
+.lp-anatomy-sql {
+  font-family: var(--mono); font-size: clamp(13px, 1.5vw, 19px); line-height: 2;
+  white-space: pre; overflow-x: auto; padding: clamp(18px, 3vw, 36px); background: #fff; border-radius: 4px;
+}
+.lp-mark {
+  padding: 0.08em 0.22em; border-radius: 0.2em; cursor: default; outline-offset: 2px;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+  transition: opacity 0.18s ease, background-color 0.18s ease;
+}
+.lp-mark[data-key='count'] { background: #ffd640; }
+.lp-mark[data-key='plan'] { background: #a9b6ff; }
+.lp-mark[data-key='country'] { background: #ffb3a6; }
+.lp-mark[data-key='month'] { background: #a4e6c6; }
+.lp-mark[data-dim='true'] { opacity: 0.28; background: transparent; }
+
+.lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(24px, 4vw, 56px); margin-top: clamp(56px, 8vw, 110px); counter-reset: step; }
+.lp-steps li { counter-increment: step; border-top: 3px solid var(--ink); padding-top: 18px; }
+.lp-steps li::before { content: counter(step); display: block; font-size: 64px; font-weight: 800; font-stretch: 75%; line-height: 1; color: var(--cobalt); }
+.lp-steps h3 { margin-top: 14px; font-size: 24px; font-weight: 700; letter-spacing: -0.015em; }
+.lp-steps p { margin-top: 8px; font-size: 17px; }
+
+/* ---------- ink: safety ---------- */
+.lp-ink { background: var(--ink); color: var(--paper); }
+.lp-risks { margin-top: clamp(40px, 6vw, 80px); }
+.lp-risks li {
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(16px, 4vw, 64px); align-items: center;
+  padding: clamp(18px, 2.4vw, 30px) 0; border-top: 1px solid rgba(236, 238, 244, 0.22);
+}
+.lp-risks li:last-child { border-bottom: 1px solid rgba(236, 238, 244, 0.22); }
+.lp-risk { font-size: clamp(24px, 3.6vw, 50px); font-weight: 700; font-stretch: 80%; letter-spacing: -0.025em; line-height: 1.08; }
+/* The strike-through is a background line, so it can be drawn across wrapped lines. */
+.lp-risk span {
+  background-image: linear-gradient(var(--yellow), var(--yellow));
+  background-repeat: no-repeat; background-position: 0 58%; background-size: 100% 0.09em;
+}
+.lp-fix { font-size: clamp(16px, 1.4vw, 19px); max-width: 44ch; }
+
+/* ---------- yellow: self-repair ---------- */
+.lp-yellow { background: var(--yellow); color: var(--ink); }
+.lp-repair { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 96px); align-items: center; }
+.lp-slip-static { background: #fff; transform: rotate(-1.4deg); box-shadow: 10px 12px 0 var(--ink); }
+.lp-slip-static pre { white-space: pre-wrap; font-size: 13.5px; line-height: 1.7; }
+.lp-slip-static b { font-family: var(--sans); font-size: 17px; }
+.lp-bad { color: var(--red); font-weight: 600; text-decoration: line-through; text-decoration-thickness: 1px; }
+.lp-good { color: var(--green); font-weight: 700; }
+
+/* ---------- band: what it is built with ---------- */
+.lp-band { background: var(--ink); color: var(--paper); overflow: hidden; padding: 18px 0; }
+.lp-band-track { display: flex; width: max-content; animation: lp-slide 40s linear infinite; }
+.lp-band span { font-size: clamp(36px, 5.6vw, 84px); font-weight: 800; font-stretch: 75%; letter-spacing: -0.03em; line-height: 1.1; white-space: nowrap; padding-right: 0.5em; }
+.lp-band span::after { content: '✳'; display: inline-block; margin-left: 0.5em; color: var(--yellow); font-size: 0.55em; vertical-align: 0.25em; }
+.lp-band span:nth-child(even) { color: transparent; -webkit-text-stroke: 1.5px var(--paper); }
+.lp-band span:nth-child(even)::after { -webkit-text-stroke: 0; }
+@keyframes lp-slide { to { transform: translateX(-50%); } }
+
+/* ---------- close ---------- */
+.lp-close { padding: clamp(88px, 13vw, 190px) var(--pad); text-align: center; }
+.lp-close h2 { font-size: clamp(52px, 11vw, 180px); max-width: none; }
+.lp-close p { max-width: 44ch; margin: 28px auto 0; font-size: clamp(17px, 1.6vw, 21px); }
+.lp-close-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 36px; }
+
+.lp-footer {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 24px var(--pad); background: var(--ink); color: var(--paper); font-size: 15px;
+}
+
+/* ---------- small screens ---------- */
+@media (max-width: 900px) {
+  .lp-nav nav { display: none; }
+  .lp-answer-row, .lp-repair, .lp-risks li, .lp-steps { grid-template-columns: minmax(0, 1fr); }
+  .lp-question { min-height: 2.82em; }
+  .lp-slip { transform: rotate(0.8deg); }
+  .lp-risks li { gap: 10px; }
+}
+@media (max-width: 480px) {
+  .lp { font-size: 17px; }
+  .lp-nav { padding-left: 14px; }
+  .lp-nav .lp-link { padding: 8px; }
+  .lp-btn-big { width: 100%; }
+}
+
+/* Visitors who ask for less motion get a still page (GSAP is skipped for them too). */
+@media (prefers-reduced-motion: reduce) {
+  html:has(.lp) { scroll-behavior: auto; }
+  .lp-band-track { animation: none; }
+  .lp-btn { transition: none; }
+}

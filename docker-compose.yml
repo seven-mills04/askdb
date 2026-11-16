@@ -1,0 +1,54 @@
+# Runs the whole app locally:  docker compose up --build
+# Then open http://localhost:5173
+#
+# The secrets below are fine for your own laptop. Use real ones (see .env.example) anywhere public.
+
+# A fixed project name. Without it Docker names the project (and its database volume) after
+# the folder, so unzipping a new copy into a differently named folder starts with an empty
+# database and every saved account seems to have vanished.
+name: askdb
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: askdb
+      POSTGRES_PASSWORD: askdb
+      POSTGRES_DB: askdb            # AskDB's own data: users and saved connections
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro   # creates the "tunebase" demo database on first start
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U askdb -d tunebase"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASKDB_DB_URL: jdbc:postgresql://db:5432/askdb
+      ASKDB_DB_USER: askdb
+      ASKDB_DB_PASSWORD: askdb
+      ASKDB_DEMO_HOST: db
+      ASKDB_JWT_SECRET: ${ASKDB_JWT_SECRET:-local-dev-jwt-secret-change-me-0123456789}
+      ASKDB_ENCRYPTION_SECRET: ${ASKDB_ENCRYPTION_SECRET:-local-dev-encryption-secret-change-me}
+      ASKDB_CORS_ORIGINS: http://localhost:5173
+      ASKDB_AI_API_KEY: ${ASKDB_AI_API_KEY:-}     # put your Groq key in a .env file to switch on plain-English questions
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
