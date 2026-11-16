@@ -51,16 +51,17 @@ export default function Workspace({ user, onSignOut }) {
   const shellRef = useRef(null)
   const resultsRef = useRef(null)
 
-  // One entrance when the workspace opens: top bar, then sidebar, then the main column.
+  // One entrance when the workspace opens. Fades only: animating a transform on a
+  // container this large leaves stale paint behind on some graphics drivers.
   useLayoutEffect(() => {
     const mm = gsap.matchMedia()
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const q = gsap.utils.selector(shellRef)
       gsap
-        .timeline({ defaults: { ease: 'power3.out', duration: 0.5 } })
-        .from(q('header'), { yPercent: -100 })
-        .from(q('aside'), { autoAlpha: 0, x: -24 }, '-=0.25')
-        .from(q('main'), { autoAlpha: 0, y: 20 }, '-=0.35')
+        .timeline({ defaults: { ease: 'power2.out', duration: 0.4, clearProps: 'all' } })
+        .from(q('header'), { autoAlpha: 0 })
+        .from(q('aside'), { autoAlpha: 0 }, '-=0.25')
+        .from(q('main'), { autoAlpha: 0 }, '-=0.3')
     })
     return () => mm.revert()
   }, [])
@@ -70,7 +71,7 @@ export default function Workspace({ user, onSignOut }) {
     if (!result || !resultsRef.current) return
     const mm = gsap.matchMedia()
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from(resultsRef.current, { y: 18, autoAlpha: 0, duration: 0.45, ease: 'power3.out', clearProps: 'transform,opacity,visibility' })
+      gsap.from(resultsRef.current, { y: 14, autoAlpha: 0, duration: 0.4, ease: 'power2.out', clearProps: 'all' })
     })
     return () => mm.revert()
   }, [result])
@@ -172,7 +173,7 @@ export default function Workspace({ user, onSignOut }) {
       (res) => {
         setSql(res.sql)
         setResult(res.result)
-        setAnswer({ question: res.question, summary: res.summary, attempts: res.attempts })
+        setAnswer({ question: res.question, summary: res.summary, summaryNote: res.summaryNote, attempts: res.attempts })
       },
     )
   }
@@ -365,6 +366,12 @@ export default function Workspace({ user, onSignOut }) {
           )}
 
           {answer?.summary && result && <AnswerSummary text={answer.summary} dimmed={running !== null} />}
+
+          {answer && !answer.summary && answer.summaryNote && result && (
+            <Typography color="text.secondary" sx={{ fontSize: 13, flexShrink: 0 }}>
+              {answer.summaryNote}
+            </Typography>
+          )}
 
           {result ? (
             <Box ref={resultsRef} sx={{ opacity: running ? 0.55 : 1, transition: 'opacity .15s' }}>

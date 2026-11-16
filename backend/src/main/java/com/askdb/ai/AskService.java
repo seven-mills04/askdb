@@ -16,6 +16,8 @@ import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -34,11 +36,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class AskService {
 
+    private static final Logger log = LoggerFactory.getLogger(AskService.class);
+
     public static final int MAX_ATTEMPTS = 3; // first try + up to two repairs
     static final String CANNOT_ANSWER = "CANNOT_ANSWER";
 
     private static final long SCHEMA_CACHE_MS = 10 * 60 * 1000;
     private static final int SUMMARY_ROWS = 20;
+    private static final int SUMMARY_ATTEMPTS = 2;
+    private static final long SUMMARY_RETRY_WAIT_MS = 1200;
     private static final Pattern CODE_FENCE = Pattern.compile("```(?:[a-zA-Z]*\\r?\\n)?(.*?)```", Pattern.DOTALL);
     private static final Pattern QUERY_START = Pattern.compile("\\b(select|with)\\b", Pattern.CASE_INSENSITIVE);
 
@@ -63,6 +69,18 @@ public class AskService {
             Don't mention SQL, tables or columns. Don't guess at reasons. Plain text only.""";
 
     private record CachedSchema(String text, long expiresAt) {}
+
+    /** Either the summary text, or a short note saying why there isn't one. */
+    private record Summary(String text, String note) {
+
+        static Summary of(String text) {
+            return new Summary(text, null);
+        }
+
+        static Summary missing(String note) {
+            return new Summary(null, note);
+        }
+    }
 
     private final LlmClient llm;
     private final SchemaReader schemaReader;
@@ -95,7 +113,8 @@ public class AskService {
             String sql = extractSql(reply);
             try {
                 QueryResult result = queryExecutor.run(target, sql);
-                return new AskResponse(question, sql, attempt, summarize(question, result), result);
+                Summary summary = summarize(question, result);
+                return new AskResponse(question, sql, attempt, summary.text(), summary.note(), result);
             } catch (QueryFailedException ex) {
                 lastError = ex.getMessage();
                 // Self-repair: hand the model its own SQL plus the error, and ask for a fixed query.
@@ -127,29 +146,67 @@ public class AskService {
         return start.find() ? text.substring(start.start()).strip() : text;
     }
 
-    /** A nice-to-have: if the summary fails for any reason, the user still gets their table. */
-    private String summarize(String question, QueryResult result) {
-        if (!summaries || result.rowCount() == 0) {
-            return null;
+    /**
+     * A nice-to-have: the table is the real answer, so a failed summary never fails the
+     * request. The free tier of an AI service often refuses the second call in a second,
+     * so one busy reply is retried after a short wait before giving up.
+     */
+    private Summary summarize(String question, QueryResult result) {
+        if (!summaries) {
+            return Summary.missing(null);
         }
-        try {
-            StringBuilder table = new StringBuilder(String.join(" | ", result.columns())).append('\n');
-            result.rows().stream().limit(SUMMARY_ROWS).forEach(row -> {
-                List<String> cells = new ArrayList<>();
-                for (Object value : row) {
-                    cells.add(shorten(String.valueOf(value), 60));
+        if (result.rowCount() == 0) {
+            return Summary.missing(null);
+        }
+
+        List<Message> messages = List.of(
+                new Message("system", SUMMARY_PROMPT),
+                new Message("user", "Question: " + question + "\n\nResult:\n" + resultAsText(result)));
+
+        for (int attempt = 1; attempt <= SUMMARY_ATTEMPTS; attempt++) {
+            try {
+                return Summary.of(shorten(llm.chat(messages).strip(), 400));
+            } catch (ApiException ex) {
+                boolean busy = ex.getStatus() == HttpStatus.TOO_MANY_REQUESTS;
+                if (busy && attempt < SUMMARY_ATTEMPTS && pause()) {
+                    continue;
                 }
-                table.append(String.join(" | ", cells)).append('\n');
-            });
-            if (result.rowCount() > SUMMARY_ROWS) {
-                table.append("(").append(result.rowCount() - SUMMARY_ROWS).append(" more rows not shown)\n");
+                log.warn("No summary for this answer: {}", ex.getMessage());
+                return Summary.missing(busy
+                        ? "The AI service was busy, so there is no summary for this one. The table below is the answer."
+                        : "The summary could not be written, but the table below is the answer.");
+            } catch (RuntimeException ex) {
+                log.warn("No summary for this answer", ex);
+                return Summary.missing("The summary could not be written, but the table below is the answer.");
             }
-            String reply = llm.chat(List.of(
-                    new Message("system", SUMMARY_PROMPT),
-                    new Message("user", "Question: " + question + "\n\nResult:\n" + table)));
-            return shorten(reply.strip(), 400);
-        } catch (RuntimeException ex) {
-            return null;
+        }
+        return Summary.missing("The summary could not be written, but the table below is the answer.");
+    }
+
+    /** The first rows of the result as plain text, which is what the model reads. */
+    private static String resultAsText(QueryResult result) {
+        StringBuilder table = new StringBuilder(String.join(" | ", result.columns())).append('\n');
+        result.rows().stream().limit(SUMMARY_ROWS).forEach(row -> {
+            List<String> cells = new ArrayList<>();
+            for (Object value : row) {
+                cells.add(shorten(String.valueOf(value), 60));
+            }
+            table.append(String.join(" | ", cells)).append('\n');
+        });
+        if (result.rowCount() > SUMMARY_ROWS) {
+            table.append("(").append(result.rowCount() - SUMMARY_ROWS).append(" more rows not shown)\n");
+        }
+        return table.toString();
+    }
+
+    /** Waits before retrying a summary. Returns false if the wait was interrupted. */
+    private static boolean pause() {
+        try {
+            Thread.sleep(SUMMARY_RETRY_WAIT_MS);
+            return true;
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 

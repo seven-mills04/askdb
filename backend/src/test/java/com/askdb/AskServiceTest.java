@@ -78,6 +78,7 @@ class AskServiceTest {
         assertEquals("SELECT COUNT(*) AS artists FROM artists", answer.sql());
         assertEquals(1, answer.attempts());
         assertEquals("There are 60 artists.", answer.summary());
+        assertNull(answer.summaryNote());
         assertEquals(ONE_ROW, answer.result());
 
         List<Message> firstCall = conversations.get(0);
@@ -148,6 +149,7 @@ class AskServiceTest {
         AskResponse answer = service.ask(TARGET, "How many artists?");
 
         assertNull(answer.summary());
+        assertTrue(answer.summaryNote().contains("busy"), "the user is told why there is no summary");
         assertEquals(ONE_ROW, answer.result());
     }
 
