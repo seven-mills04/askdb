@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { api } from '../api.js'
 import Anatomy from './Anatomy.jsx'
 import { STACK } from './content.js'
 import Flow from './Flow.jsx'
@@ -15,6 +17,12 @@ function Mark() {
 }
 
 export default function Landing({ onSignIn, onGetStarted }) {
+  // The free server sleeps when idle and takes about a minute to wake. Knock on its door as
+  // soon as someone lands here, so it is usually awake by the time they press Sign in.
+  useEffect(() => {
+    api.health().catch(() => {})
+  }, [])
+
   return (
     <div className="lp">
       <header className="lp-nav">

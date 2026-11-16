@@ -18,6 +18,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro   # creates the "tunebase" demo database on first start
+      - ./backend/src/main/resources/demo/tunebase.sql:/askdb-seed/tunebase.sql:ro   # the shared seed file it runs
     ports:
       - "5432:5432"
     healthcheck:

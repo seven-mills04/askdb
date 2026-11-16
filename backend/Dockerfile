@@ -10,5 +10,13 @@ RUN mvn -q -B package -DskipTests
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 COPY --from=build /app/target/askdb.jar app.jar
+COPY docker-entrypoint.sh .
+# Strip Windows line endings in case the file was checked out on Windows, then make it runnable.
+RUN sed -i 's/\r$//' docker-entrypoint.sh && chmod +x docker-entrypoint.sh
+
+# Sized for small hosts (Render's free plan has 512 MB): cap the heap at 70% of the container's
+# memory, use the simplest garbage collector, and favour a quick start over peak speed.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=70 -XX:+UseSerialGC -Xss512k -XX:TieredStopAtLevel=1"
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["./docker-entrypoint.sh"]

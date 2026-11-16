@@ -56,10 +56,96 @@ jobs:
       PGPASSWORD: askdb
     steps:
       - uses: actions/checkout@v4
-      - name: Run the seed script
-        run: psql -h localhost -U askdb -d askdb -v ON_ERROR_STOP=1 -q -f db/init/01-tunebase-demo.sql
+      - name: Run the seed script (the way local Docker does)
+        run: |
+          sudo mkdir -p /askdb-seed
+          sudo cp backend/src/main/resources/demo/tunebase.sql /askdb-seed/
+          psql -h localhost -U askdb -d askdb -v ON_ERROR_STOP=1 -q -f db/init/01-tunebase-demo.sql
       - name: Demo login can read but not write
         run: |
           export PGPASSWORD=demo_readonly
           test "$(psql -h localhost -U askdb_demo -d tunebase -At -c 'SELECT COUNT(*) FROM artists')" = "60"
           ! psql -h localhost -U askdb_demo -d tunebase -c 'DELETE FROM artists'
+
+  deploy-check:
+    name: Deploy check (boots the backend the way Render does)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: admin
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U admin" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      API: http://localhost:8080/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build the jar
+        run: mvn -B -q -f backend/pom.xml package -DskipTests
+
+      - name: Create a database user like Render's (owner of its database, not a superuser)
+        env:
+          PGPASSWORD: admin
+        run: |
+          psql -h localhost -U admin -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE askdb LOGIN CREATEROLE PASSWORD 'renderpw'" \
+            -c "CREATE DATABASE askdb OWNER askdb"
+
+      - name: Start AskDB through the container entrypoint, with a single DATABASE_URL
+        run: |
+          export DATABASE_URL=postgresql://askdb:renderpw@localhost:5432/askdb
+          export ASKDB_DEMO_SEED=true ASKDB_DEMO_PASSWORD='gen+erated/Base64=='
+          export ASKDB_JWT_SECRET=ci-jwt-secret-ci-jwt-secret-0123456789 ASKDB_ENCRYPTION_SECRET=ci-encryption-secret
+          export APP_JAR=backend/target/askdb.jar JAVA_OPTS="-Xmx350m -XX:+UseSerialGC"
+          nohup sh backend/docker-entrypoint.sh > app.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf $API/health > /dev/null && break; sleep 2; done
+          for i in $(seq 1 60); do grep -q "Demo data ready" app.log && break; sleep 2; done
+          grep -q "Demo data ready" app.log
+
+      - name: Sign up, read the demo schema and query it
+        run: |
+          TOKEN=$(curl -sf -X POST $API/auth/register -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.com","password":"correct-horse"}' | jq -r .token)
+          AUTH="Authorization: Bearer $TOKEN"
+          test "$(curl -sf $API/connections/0/schema -H "$AUTH" | jq '.tables | length')" = "7"
+          PLAYS=$(curl -sf -X POST $API/connections/0/query -H "$AUTH" -H 'Content-Type: application/json' \
+            -d '{"sql":"SELECT COUNT(*) AS n FROM plays"}' | jq '.rows[0][0]')
+          echo "plays: $PLAYS"; test "$PLAYS" -gt 50000
+
+      - name: The demo login cannot see AskDB's own tables
+        run: |
+          TOKEN=$(curl -sf -X POST $API/auth/login -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.com","password":"correct-horse"}' | jq -r .token)
+          BODY=$(curl -s -X POST $API/connections/0/query -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' -d '{"sql":"SELECT email, password_hash FROM public.users"}')
+          echo "$BODY"; echo "$BODY" | grep -q "permission denied"
+
+      - name: A restart keeps accounts and does not rebuild the demo
+        run: |
+          pkill -f askdb.jar; sleep 3
+          export DATABASE_URL=postgresql://askdb:renderpw@localhost:5432/askdb
+          export ASKDB_DEMO_SEED=true ASKDB_DEMO_PASSWORD='gen+erated/Base64=='
+          export ASKDB_JWT_SECRET=ci-jwt-secret-ci-jwt-secret-0123456789 ASKDB_ENCRYPTION_SECRET=ci-encryption-secret
+          export APP_JAR=backend/target/askdb.jar JAVA_OPTS="-Xmx350m -XX:+UseSerialGC"
+          nohup sh backend/docker-entrypoint.sh > app2.log 2>&1 &
+          for i in $(seq 1 90); do curl -sf $API/health > /dev/null && break; sleep 2; done
+          for i in $(seq 1 30); do grep -q "Demo data ready" app2.log && break; sleep 2; done
+          grep -q "already present" app2.log
+          curl -sf -X POST $API/auth/login -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.com","password":"correct-horse"}' | jq -e .token > /dev/null
+
+      - name: Show the backend log if anything failed
+        if: failure()
+        run: cat app.log app2.log 2>/dev/null | tail -150
+

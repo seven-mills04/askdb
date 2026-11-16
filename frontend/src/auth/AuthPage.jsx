@@ -51,6 +51,7 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [slow, setSlow] = useState(false)
   const root = useRef(null)
 
   const isRegister = mode === 'register'
@@ -74,12 +75,15 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
     e.preventDefault()
     setError(null)
     setBusy(true)
+    const slowTimer = setTimeout(() => setSlow(true), 4000) // a cold free server takes a while
     try {
       const res = isRegister ? await api.register(email, password) : await api.login(email, password)
       onAuth(res)
     } catch (err) {
       setError(err.message)
     } finally {
+      clearTimeout(slowTimer)
+      setSlow(false)
       setBusy(false)
     }
   }
@@ -166,6 +170,11 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
           >
             {busy ? 'One moment…' : copy.button}
           </Button>
+          {slow && (
+            <Typography role="status" sx={{ fontSize: 14, color: '#4b5175' }}>
+              Waking the server up. It sleeps when nobody is using it, so the first sign-in can take up to a minute.
+            </Typography>
+          )}
         </Stack>
 
         <Typography sx={{ mt: 3, fontSize: 15, color: '#4b5175' }}>

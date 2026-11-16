@@ -10,7 +10,7 @@ Ask a database questions in plain English and get back the SQL, the answer, and 
 
 > **Status: Phases 0–2 built.** Sign up, connect a PostgreSQL or MySQL database (or use the built-in demo),
 > ask a question in plain English, and get the SQL, a one-line answer, and a table or chart.
-> Not deployed yet (Phase 3).
+> Backend on Render, frontend on Vercel (see Deploy below).
 
 ## Why this exists
 
@@ -29,7 +29,7 @@ what it actually did.
 | SQL safety | JSqlParser + read-only transactions + timeout + row cap     |
 | AI         | Groq (any OpenAI-compatible API), called with Spring's RestClient |
 | Frontend   | React, Vite, MUI, Recharts, GSAP (landing page animation)   |
-| DevOps     | Docker Compose, GitHub Actions (Render + Vercel in Phase 3) |
+| DevOps     | Docker Compose, GitHub Actions, Render (backend + Postgres), Vercel (frontend) |
 
 ## How it works
 
@@ -93,7 +93,7 @@ JDBC driver options; private network addresses can be blocked (`ASKDB_BLOCK_PRIV
 
 ## The demo database
 
-`db/init/01-tunebase-demo.sql` builds **Tunebase**, a fictional music-streaming service, in pure SQL
+`backend/src/main/resources/demo/tunebase.sql` builds **Tunebase**, a fictional music-streaming service, in pure SQL
 (`generate_series` + a fixed random seed, so it's the same on every machine; nothing in it is real).
 Every user gets it as a ready-made connection, through a login that can only read.
 
@@ -128,7 +128,7 @@ The first start takes a few minutes (it downloads Java libraries and builds the 
 <summary>Running without Docker (for development)</summary>
 
 Needs Java 21, Maven, Node 20+ and a PostgreSQL 16 server with the seed script loaded
-(`psql -U askdb -d askdb -f db/init/01-tunebase-demo.sql`).
+(see `db/init/01-tunebase-demo.sql`, which creates the `tunebase` database and runs the seed file).
 
 ```bash
 cd backend && mvn spring-boot:run      # API on http://localhost:8080
@@ -137,6 +137,25 @@ cd frontend && npm install && npm run dev   # UI on http://localhost:5173
 
 Tests: `cd backend && mvn verify` (they use an in-memory H2 database, so no setup is needed).
 </details>
+
+## Deploy
+
+**Backend and database: Render.** `render.yaml` is a Render Blueprint. In Render choose
+*New → Blueprint*, pick this repository, paste the Groq key when asked, and apply. It creates:
+
+- `askdb-api`: the Spring Boot backend, built from `backend/Dockerfile`, sized for the 512 MB free plan.
+- `askdb-db`: PostgreSQL, reachable only from Render's private network.
+
+Render's free plan gives one database, so the backend builds the demo data inside it on first start
+(`DemoSeeder.java`): in a separate `tunebase` schema, behind a login that can read that schema and
+nothing else. A question about the demo can never see AskDB's own `users` or saved connections.
+The CI job *Deploy check* boots the real jar this way on every push and asserts exactly that.
+
+**Frontend: Vercel.** Import the repository, set *Root Directory* to `frontend`, and add the
+environment variable `VITE_API_URL` = the Render backend's address (e.g. `https://askdb-api.onrender.com`).
+
+Free-plan limits: the backend sleeps after 15 idle minutes and takes about a minute to wake (the landing
+page wakes it in the background), and Render's free database expires after 30 days.
 
 ## API
 
@@ -176,7 +195,8 @@ frontend/src/
   auth/         sign in / create account
   workspace/    ask bar, schema sidebar, history, SQL editor, results table, chart, connect-database dialog
   api.js        every backend call, token handling
-db/init/        demo database seed script
+db/init/        local Docker wrapper that creates the demo database
+render.yaml     Render Blueprint: backend + Postgres
 ```
 
 ## Roadmap
@@ -184,4 +204,4 @@ db/init/        demo database seed script
 - [x] **Phase 0 – Foundation**: accounts, encrypted saved connections, schema browser, safe query execution, table + chart results, demo data, tests, CI
 - [x] **Phase 1 – Plain English → SQL**: schema-aware prompt (Groq), generated SQL always shown and editable, self-repair when the SQL fails, per-user rate limit
 - [x] **Phase 2 – Answers, not just tables**: one-line summary of the result, table or chart view, query history
-- [ ] **Phase 3 – Ship it**: backend on Render, frontend on Vercel
+- [x] **Phase 3 – Ship it**: backend on Render, frontend on Vercel, CI job that boots the backend the way Render does
