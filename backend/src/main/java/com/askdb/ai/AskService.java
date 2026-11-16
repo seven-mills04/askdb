@@ -64,9 +64,15 @@ public class AskService {
             %s""";
 
     private static final String SUMMARY_PROMPT = """
-            You explain database query results to a non-technical person.
-            Answer the question in one or two short sentences using only the numbers in the result.
-            Don't mention SQL, tables or columns. Don't guess at reasons. Plain text only.""";
+            You answer a question from a database result, for someone non-technical.
+            Reply with one or two short sentences of plain English that actually answer the question.
+
+            - Never just list the rows or read numbers back. Describe what they show.
+            - For a trend over time, say the direction and give the start and end (or the high and low),
+              e.g. "grew steadily from 615 in May 2025 to 904 in October 2026". Don't name every month.
+            - For a ranking, name the top one or two and how they compare, not the whole list.
+            - For a single number, state it with what it measures.
+            - Round long numbers sensibly. Don't mention SQL, tables or columns. Don't guess at reasons.""";
 
     private record CachedSchema(String text, long expiresAt) {}
 
