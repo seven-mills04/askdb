@@ -2,6 +2,8 @@
 
 Ask a database questions in plain English and get back the SQL, the answer, and a chart.
 
+**Live: [askdb-sigma.vercel.app](https://askdb-sigma.vercel.app)** (the free backend sleeps when idle; the first load can take up to a minute)
+
 ![AskDB landing page](docs/landing.png)
 
 ![How a question becomes an answer](docs/walkthrough.png)
