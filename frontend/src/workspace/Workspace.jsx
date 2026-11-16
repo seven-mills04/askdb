@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import InputBase from '@mui/material/InputBase'
+import LinearProgress from '@mui/material/LinearProgress'
 import MenuItem from '@mui/material/MenuItem'
 import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
@@ -14,9 +15,10 @@ import Typography from '@mui/material/Typography'
 import gsap from 'gsap'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { api } from '../api.js'
-import { BRAND, MONO } from '../theme.js'
+import { BRAND, DISPLAY, MONO } from '../theme.js'
 import AnswerSummary from './AnswerSummary.jsx'
 import ConnectionDialog from './ConnectionDialog.jsx'
+import DatabaseOverview from './DatabaseOverview.jsx'
 import { EXAMPLE_QUESTIONS, EXAMPLES } from './examples.js'
 import HistoryList from './HistoryList.jsx'
 import ResultsPanel from './ResultsPanel.jsx'
@@ -290,36 +292,71 @@ export default function Workspace({ user, onSignOut }) {
           )}
         </Box>
 
-        <Stack component="main" spacing={1.75} sx={{ p: '18px 20px', overflow: 'auto', minWidth: 0 }}>
+        <Stack component="main" spacing={2.5} sx={{ p: { xs: '16px', md: '24px 28px 40px' }, overflow: 'auto', minWidth: 0 }}>
           {pageError && (
             <Alert severity="error" onClose={() => setPageError(null)}>
               {pageError}
             </Alert>
           )}
 
-          <Paper variant="outlined" sx={{ overflow: 'hidden', flexShrink: 0 }}>
-            <Box component="form" onSubmit={(e) => { e.preventDefault(); ask() }} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: '14px 14px 14px 18px' }}>
+          <Box sx={{ position: 'relative', flexShrink: 0, bgcolor: BRAND.cobalt, color: BRAND.paper, borderRadius: '6px', overflow: 'hidden', boxShadow: '8px 9px 0 rgba(36, 55, 230, 0.28)' }}>
+            <Box component="form" onSubmit={(e) => { e.preventDefault(); ask() }} sx={{ display: 'flex', alignItems: 'center', gap: 2, p: { xs: '16px', md: '22px 22px 22px 26px' } }}>
               <InputBase
                 fullWidth
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 disabled={!aiEnabled}
-                placeholder={aiEnabled ? 'Ask a question about this data in plain English…' : 'Plain-English questions are off (no AI key on the server). You can still write SQL below.'}
+                placeholder={aiEnabled ? 'Ask a question about this data…' : 'Questions are off: no AI key on the server. You can still write SQL below.'}
                 inputProps={{ 'aria-label': 'Question', maxLength: 500 }}
-                sx={{ fontSize: { xs: 18, md: 22 }, fontWeight: 600, letterSpacing: '-0.015em' }}
+                sx={{
+                  ...DISPLAY,
+                  lineHeight: 1.1,
+                  fontSize: { xs: 24, md: 38 },
+                  color: 'inherit',
+                  '& input::placeholder': { color: BRAND.paper, opacity: 0.7 },
+                  '& input.Mui-disabled': { WebkitTextFillColor: 'rgba(236, 238, 244, 0.6)' },
+                }}
               />
-              <Button type="submit" variant="contained" color="secondary" disabled={!aiEnabled || running !== null || question.trim().length < 3 || activeId === null} sx={{ flexShrink: 0, px: 3, py: 1, fontSize: 16 }}>
+              <Button
+                type="submit"
+                variant="contained"
+                color="secondary"
+                disabled={!aiEnabled || running !== null || question.trim().length < 3 || activeId === null}
+                sx={{ flexShrink: 0, px: 3.5, py: 1.25, fontSize: 18, '&.Mui-disabled': { bgcolor: 'rgba(236, 238, 244, 0.18)', color: 'rgba(236, 238, 244, 0.55)' } }}
+              >
                 {running === 'ask' ? 'Thinking…' : 'Ask'}
               </Button>
             </Box>
             {aiEnabled && active?.demo && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, px: 2, pb: 1.75 }}>
-                {EXAMPLE_QUESTIONS.map((q) => (
-                  <Chip key={q} size="small" label={q} clickable variant="outlined" color={question === q ? 'primary' : 'default'} onClick={() => ask(q)} />
-                ))}
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, px: { xs: 2, md: 3.25 }, pb: 2.5 }}>
+                {EXAMPLE_QUESTIONS.map((q) => {
+                  const on = question === q
+                  return (
+                    <Chip
+                      key={q}
+                      label={q}
+                      clickable
+                      onClick={() => ask(q)}
+                      sx={{
+                        fontSize: 13.5,
+                        fontWeight: on ? 700 : 500,
+                        color: on ? BRAND.cobalt : BRAND.paper,
+                        bgcolor: on ? BRAND.paper : 'transparent',
+                        border: '2px solid',
+                        borderColor: on ? BRAND.paper : 'rgba(236, 238, 244, 0.4)',
+                        '&:hover': { bgcolor: on ? BRAND.paper : 'rgba(236, 238, 244, 0.12)', borderColor: BRAND.paper },
+                      }}
+                    />
+                  )
+                })}
               </Box>
             )}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.5, borderTop: 1, borderBottom: 1, borderColor: 'divider' }}>
+            {/* A yellow line runs along the bottom while a question or query is in flight. */}
+            {running !== null && <LinearProgress color="secondary" sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 4, bgcolor: 'transparent' }} />}
+          </Box>
+
+          <Paper variant="outlined" sx={{ overflow: 'hidden', flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
               <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
                 SQL
               </Typography>
@@ -378,13 +415,8 @@ export default function Workspace({ user, onSignOut }) {
               <ResultsPanel result={result} />
             </Box>
           ) : (
-            !queryError && (
-              <Box sx={{ display: 'grid', placeItems: 'center', flex: 1, minHeight: 160, border: '1px dashed', borderColor: 'divider', borderRadius: 1, color: 'text.secondary', textAlign: 'center', p: 2 }}>
-                <Typography sx={{ maxWidth: 380 }}>
-                  {aiEnabled ? 'Ask a question to see results.' : 'Run a query to see results.'} Click any table or column on the left to drop its name into the editor.
-                </Typography>
-              </Box>
-            )
+            !queryError &&
+            schema && <DatabaseOverview tables={schema.tables} name={active?.name ?? 'this database'} aiEnabled={aiEnabled} />
           )}
         </Stack>
       </Box>

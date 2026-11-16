@@ -27,7 +27,7 @@
 .lp :where(p, h1, h2, h3, ul, ol, figure, pre) { margin: 0; padding: 0; }
 .lp :where(ul, ol) { list-style: none; }
 .lp :focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
-html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 84px; }
+html:has(.lp) { scroll-padding-top: 84px; }
 
 /* Headline voice: narrow, heavy, tight. */
 .lp h1, .lp h2, .lp .lp-answer {
@@ -117,6 +117,47 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 }
 .lp-hero-foot p { max-width: 52ch; font-size: clamp(17px, 1.5vw, 20px); }
 
+/* ---------- flow: the scroll walkthrough ---------- */
+.lp-flow { background: var(--ink); color: var(--paper); }
+.lp-flow-inner { max-width: 1280px; margin: 0 auto; padding: clamp(72px, 9vw, 120px) var(--pad); }
+.lp-flow h2 { max-width: 20ch; font-size: clamp(34px, 5vw, 72px); }
+.lp-flow-stage { margin-top: clamp(28px, 4vw, 48px); }
+.lp-flow-rail, .lp-flow-steps { display: none; } /* only used by the pinned desktop version */
+
+.lp-flow-art { margin-top: 18px; padding: clamp(18px, 3vw, 32px); background: #131a45; border-radius: 6px; }
+.fl-cap { font-size: 15px; font-weight: 700; color: var(--yellow); margin-bottom: 14px; }
+.fl-question { font-size: clamp(26px, 3.6vw, 52px); font-weight: 800; font-stretch: 75%; letter-spacing: -0.03em; line-height: 1.02; }
+.fl-tables { display: flex; flex-wrap: wrap; gap: 10px; }
+.fl-table { display: inline-flex; align-items: baseline; gap: 10px; padding: 9px 14px; border-radius: 6px; background: rgba(236, 238, 244, 0.1); font-family: var(--mono); font-size: clamp(13px, 1.3vw, 17px); font-weight: 600; }
+.fl-table small { font-size: 0.78em; font-weight: 400; opacity: 0.7; }
+.fl-sql { font-family: var(--mono); font-size: clamp(12px, 1.35vw, 18px); line-height: 1.85; white-space: pre; overflow-x: auto; }
+.fl-line { display: block; }
+.fl-checks { display: grid; gap: 14px; }
+.fl-check { display: flex; align-items: flex-start; gap: 14px; font-size: clamp(15px, 1.5vw, 20px); line-height: 1.35; }
+.fl-check b { font-weight: 700; }
+.fl-tick { flex: none; display: grid; place-items: center; width: 26px; height: 26px; margin-top: 1px; border-radius: 50%; background: var(--yellow); color: var(--ink); }
+.fl-answer-wrap { position: relative; display: inline-block; padding: 0.08em 0.2em 0.12em; color: var(--ink); font-size: clamp(30px, 4.4vw, 64px); font-weight: 800; font-stretch: 75%; letter-spacing: -0.03em; line-height: 1; }
+.fl-marker { position: absolute; inset: 0; background: var(--yellow); border-radius: 6px; transform-origin: left center; }
+.fl-answer { position: relative; }
+.fl-bars { display: grid; gap: 12px; margin-top: 26px; max-width: 520px; }
+.fl-bar { display: grid; grid-template-columns: 84px 1fr 44px; align-items: center; gap: 12px; font-size: 15px; }
+.fl-bar i { display: block; height: 12px; border-radius: 6px; background: var(--paper); transform-origin: left center; }
+.fl-bar b { font-family: var(--mono); font-weight: 500; font-size: 14px; text-align: right; }
+
+/* Pinned version (class added by Flow.jsx): steps on the left, one panel at a time on the right. */
+.lp-flow.is-live .lp-flow-inner { height: 100vh; min-height: 620px; display: flex; flex-direction: column; padding-top: 96px; padding-bottom: 40px; }
+.lp-flow.is-live .lp-flow-stage { flex: 1; min-height: 0; display: grid; grid-template-columns: 4px minmax(0, 0.8fr) minmax(0, 1.3fr); gap: clamp(20px, 3vw, 44px); }
+.lp-flow.is-live .lp-flow-rail { display: block; background: rgba(236, 238, 244, 0.15); border-radius: 2px; overflow: hidden; }
+.lp-flow.is-live .lp-flow-rail i { display: block; width: 100%; height: 100%; background: var(--yellow); transform-origin: top center; }
+.lp-flow.is-live .lp-flow-steps { display: flex; flex-direction: column; justify-content: space-between; counter-reset: flow; }
+.lp-flow.is-live .lp-flow-step { counter-increment: flow; display: grid; grid-template-columns: 34px 1fr; column-gap: 8px; }
+.lp-flow.is-live .lp-flow-step::before { content: counter(flow); grid-row: span 2; font-size: 30px; font-weight: 800; font-stretch: 75%; line-height: 1; color: var(--yellow); }
+.lp-flow.is-live .lp-flow-step h3 { font-size: clamp(18px, 1.7vw, 24px); font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+.lp-flow.is-live .lp-flow-step p { margin-top: 4px; font-size: clamp(14px, 1.15vw, 16px); line-height: 1.4; opacity: 0.85; }
+.lp-flow.is-live .lp-flow-screen { position: relative; background: #131a45; border-radius: 6px; box-shadow: 12px 14px 0 rgba(36, 55, 230, 0.55); }
+.lp-flow.is-live .lp-flow-art { position: absolute; inset: 0; margin: 0; background: none; display: flex; flex-direction: column; justify-content: center; padding: clamp(24px, 3.4vw, 52px); }
+.lp-flow.is-live .fl-cap { display: none; }
+
 /* ---------- paper: how it works ---------- */
 .lp-paper { background: var(--paper); color: var(--ink); }
 .lp-anatomy { margin-top: clamp(40px, 6vw, 80px); }
@@ -136,12 +177,6 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 .lp-mark[data-key='country'] { background: #ffb3a6; }
 .lp-mark[data-key='month'] { background: #a4e6c6; }
 .lp-mark[data-dim='true'] { opacity: 0.28; background: transparent; }
-
-.lp-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(24px, 4vw, 56px); margin-top: clamp(56px, 8vw, 110px); counter-reset: step; }
-.lp-steps li { counter-increment: step; border-top: 3px solid var(--ink); padding-top: 18px; }
-.lp-steps li::before { content: counter(step); display: block; font-size: 64px; font-weight: 800; font-stretch: 75%; line-height: 1; color: var(--cobalt); }
-.lp-steps h3 { margin-top: 14px; font-size: 24px; font-weight: 700; letter-spacing: -0.015em; }
-.lp-steps p { margin-top: 8px; font-size: 17px; }
 
 /* ---------- ink: safety ---------- */
 .lp-ink { background: var(--ink); color: var(--paper); }
@@ -205,7 +240,6 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 84px; }
 
 /* Visitors who ask for less motion get a still page (GSAP is skipped for them too). */
 @media (prefers-reduced-motion: reduce) {
-  html:has(.lp) { scroll-behavior: auto; }
   .lp-band-track { animation: none; }
   .lp-btn { transition: none; }
 }

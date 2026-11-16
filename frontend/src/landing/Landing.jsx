@@ -1,5 +1,6 @@
 import Anatomy from './Anatomy.jsx'
-import { STACK, STEPS } from './content.js'
+import { STACK } from './content.js'
+import Flow from './Flow.jsx'
 import HeroAsk from './HeroAsk.jsx'
 import './landing.css'
 import Risks from './Risks.jsx'
@@ -47,22 +48,15 @@ export default function Landing({ onSignIn, onGetStarted }) {
           </div>
         </section>
 
-        <section className="lp-paper" id="how">
+        <Flow />
+
+        <section className="lp-paper">
           <div className="lp-wrap">
             <h2>Every question is a query you have not written yet.</h2>
             <p className="lp-lede">
-              AskDB reads your tables and columns, then works out which words mean which parts of a query. Point at a
-              phrase to see where it went.
+              AskDB works out which of your words mean which parts of a query. Point at a phrase to see where it went.
             </p>
             <Anatomy />
-            <ol className="lp-steps">
-              {STEPS.map((s) => (
-                <li key={s.title}>
-                  <h3>{s.title}</h3>
-                  <p>{s.text}</p>
-                </li>
-              ))}
-            </ol>
           </div>
         </section>
 

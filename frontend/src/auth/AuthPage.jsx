@@ -15,15 +15,34 @@ const COPY = {
   register: { title: 'Make an account.', line: 'It takes an email and a password. The demo database is ready as soon as you are in.', button: 'Create account' },
 }
 
-// The form sits on a white slip whatever the system theme is, so its fields are styled for ink on white.
+// The form sits on a white slip whatever the system theme is, so its fields are styled for
+// ink on white. Two browser behaviours are handled here:
+//  - Saved logins: Chrome paints autofilled fields in its own colour. The inset shadow covers that.
+//  - Floating labels overlap autofilled text, so the labels sit above the fields instead.
 const fieldSx = {
-  '& .MuiInputBase-root': { color: BRAND.ink, borderRadius: '6px' },
-  '& .MuiInputLabel-root': { color: '#4b5175' },
-  '& .MuiInputLabel-root.Mui-focused': { color: BRAND.cobalt },
-  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#b9bfd6' },
+  '& .MuiInputBase-root': { color: BRAND.ink, bgcolor: '#fff', borderRadius: '6px', colorScheme: 'light' },
+  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#b9bfd6', borderWidth: 2 },
   '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: BRAND.ink },
   '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: BRAND.cobalt },
-  '& .MuiFormHelperText-root': { color: '#4b5175' },
+  '& .MuiFormHelperText-root': { color: '#4b5175', mx: 0 },
+  '& input': { fontSize: 17, py: 1.6 },
+  '& input:-webkit-autofill, & input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+    WebkitBoxShadow: '0 0 0 100px #fff inset',
+    WebkitTextFillColor: BRAND.ink,
+    caretColor: BRAND.ink,
+    borderRadius: '4px',
+  },
+}
+
+function Field({ id, label, ...props }) {
+  return (
+    <Box>
+      <Typography component="label" htmlFor={id} sx={{ display: 'block', mb: 0.75, fontSize: 15, fontWeight: 700 }}>
+        {label}
+      </Typography>
+      <TextField id={id} fullWidth hiddenLabel sx={fieldSx} {...props} />
+    </Box>
+  )
 }
 
 export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
@@ -46,7 +65,7 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
         .timeline({ defaults: { ease: 'power3.out' } })
         .from(q('.auth-title'), { yPercent: 40, autoAlpha: 0, duration: 0.6 })
         .from(q('.auth-line'), { autoAlpha: 0, y: 10, duration: 0.4 }, '-=0.3')
-        .from(q('.auth-slip'), { autoAlpha: 0, y: 48, rotate: 6, duration: 0.7 }, '-=0.45')
+        .from(q('.auth-slip'), { autoAlpha: 0, y: 48, rotate: 5, duration: 0.7, clearProps: 'transform' }, '-=0.45')
     })
     return () => mm.revert()
   }, [mode])
@@ -108,12 +127,12 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
           color: BRAND.ink,
           borderRadius: '6px',
           p: { xs: 3, md: 4 },
-          transform: { md: 'rotate(1.2deg)' },
           boxShadow: `10px 12px 0 rgba(11, 16, 48, 0.35)`,
         }}
       >
-        <Stack component="form" spacing={2} onSubmit={submit}>
-          <TextField
+        <Stack component="form" spacing={2.5} onSubmit={submit}>
+          <Field
+            id="auth-email"
             label="Email"
             type="email"
             required
@@ -121,17 +140,16 @@ export default function AuthPage({ onAuth, onBack, initialMode = 'login' }) {
             autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            sx={fieldSx}
           />
-          <TextField
+          <Field
+            id="auth-password"
             label="Password"
             type="password"
             required
             autoComplete={isRegister ? 'new-password' : 'current-password'}
-            helperText={isRegister ? 'At least 8 characters' : ' '}
+            helperText={isRegister ? 'At least 8 characters' : undefined}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            sx={fieldSx}
           />
           {error && (
             <Alert severity="error" sx={{ bgcolor: '#fde7e3', color: '#8a1c10', '& .MuiAlert-icon': { color: '#d23a28' } }}>

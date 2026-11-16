@@ -41,6 +41,10 @@ export default function SchemaSidebar({ tables, loading, error, onInsert }) {
       return next
     })
 
+  // Square root scale, so one huge table doesn't flatten every other bar to nothing.
+  const biggest = Math.max(1, ...(tables ?? []).map((t) => t.rowCount ?? 0))
+  const share = (t) => Math.sqrt((t.rowCount ?? 0) / biggest)
+
   const q = filter.trim().toLowerCase()
   const visible = (tables ?? []).filter(
     (t) => !q || t.name.toLowerCase().includes(q) || t.columns.some((c) => c.name.toLowerCase().includes(q)),
@@ -106,6 +110,9 @@ export default function SchemaSidebar({ tables, loading, error, onInsert }) {
                 >
                   {t.rowCount === null ? '–' : fmt.format(t.rowCount)}
                 </ButtonBase>
+              </Box>
+              <Box aria-hidden sx={{ height: 3, mx: '22px', mr: 1.5, mb: 0.5, borderRadius: 2, bgcolor: 'action.hover', overflow: 'hidden' }}>
+                <Box sx={{ height: '100%', width: `${Math.max(share(t) * 100, 2)}%`, bgcolor: 'primary.main', borderRadius: 2 }} />
               </Box>
 
               {isOpen && (

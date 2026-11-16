@@ -4,6 +4,8 @@ Ask a database questions in plain English and get back the SQL, the answer, and 
 
 ![AskDB landing page](docs/landing.png)
 
+![How a question becomes an answer](docs/walkthrough.png)
+
 ![AskDB workspace](docs/screenshot.png)
 
 > **Status: Phases 0–2 built.** Sign up, connect a PostgreSQL or MySQL database (or use the built-in demo),
@@ -170,7 +172,7 @@ backend/src/main/java/com/askdb/
   config/       typed application settings
 backend/src/test/   unit tests (guard, JWT, AES, AI flow with a fake model, rate limiter) + full API flow tests
 frontend/src/
-  landing/      public landing page (GSAP animation, self-hosted Bricolage Grotesque + JetBrains Mono fonts)
+  landing/      public landing page: hero demo, scroll-driven walkthrough of a query (GSAP), self-hosted fonts
   auth/         sign in / create account
   workspace/    ask bar, schema sidebar, history, SQL editor, results table, chart, connect-database dialog
   api.js        every backend call, token handling

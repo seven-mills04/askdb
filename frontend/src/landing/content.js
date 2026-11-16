@@ -81,11 +81,47 @@ export const ANATOMY = {
   ],
 }
 
-export const STEPS = [
-  { title: 'Connect a database', text: 'PostgreSQL or MySQL, or the demo that comes built in. Your password is encrypted before it is saved.' },
-  { title: 'Ask your question', text: 'Write it the way you would say it. AskDB reads your tables and columns and writes one query for it.' },
-  { title: 'Check the working', text: 'You get the answer, the table, a chart and the exact SQL behind them. Change the SQL and run it again if you want.' },
-]
+// The scroll walkthrough: one real question followed from the Ask button to the answer.
+export const FLOW = {
+  question: 'Do premium users listen more than free users?',
+  steps: [
+    { title: 'You ask a question', text: 'Typed the way you would say it. No query language.' },
+    { title: 'It reads your tables', text: 'Names, columns and a few sample rows, so it knows what exists and picks what it needs.' },
+    { title: 'The AI writes one query', text: 'A single SELECT, in the dialect your database speaks.' },
+    { title: 'Four checks before it runs', text: 'The query is treated like something a stranger typed.' },
+    { title: 'Your database answers', text: 'The result comes back with the SQL beside it, so you can check the working.' },
+  ],
+  tables: [
+    ['users', '1,200', true],
+    ['plays', '58,486', true],
+    ['tracks', '1,256', false],
+    ['albums', '143', false],
+    ['artists', '60', false],
+    ['playlists', '923', false],
+    ['playlist_tracks', '13,670', false],
+  ],
+  sql: [
+    'SELECT u.plan,',
+    '       ROUND(SUM(p.seconds_played) / 3600.0',
+    '             / COUNT(DISTINCT u.id), 2) AS hours_each',
+    'FROM users u',
+    'JOIN plays p ON p.user_id = u.id',
+    'GROUP BY u.plan',
+    'ORDER BY hours_each DESC',
+  ],
+  checks: [
+    ['One statement, and it is a SELECT. ', 'Parsed into a syntax tree, not pattern-matched.'],
+    ['Read-only transaction. ', 'The database itself refuses any write.'],
+    ['Five second limit. ', 'A slow query is cancelled.'],
+    ['500 row cap. ', 'A huge result cannot flood the page.'],
+  ],
+  answer: 'Yes, 2.3× more.',
+  bars: [
+    ['family', 3.37],
+    ['premium', 3.33],
+    ['free', 1.42],
+  ],
+}
 
 export const RISKS = [
   { risk: 'The AI writes a DELETE.', fix: 'Every query is parsed into a syntax tree first. It has to be one statement, and that statement has to be a SELECT.' },
